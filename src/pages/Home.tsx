@@ -6,6 +6,7 @@ import ImageCard from '../components/ImageCard';
 import { useContent } from '../hooks/useContent';
 import { GalleryImage, BlogPost, AITool } from '../types';
 import useAdmin from '../hooks/useAdmin';
+import { useTheme } from '../hooks/useTheme';
 
 // 핵심 기능
 const features = [
@@ -41,6 +42,7 @@ const features = [
 const Home = () => {
   const navigate = useNavigate();
   const { verifyPassword, isAdmin, logout } = useAdmin();
+  const { currentTheme } = useTheme();
 
   const {
     items: galleryImages,
@@ -73,7 +75,7 @@ const Home = () => {
     // TODO: Implement search functionality
   };
 
-  // 자동 관리자 로그인 함수
+  // 관리자 로그인 함수
   const handleAutoLogin = async () => {
     try {
       const password = prompt('관리자 비밀번호를 입력하세요:');
@@ -97,60 +99,65 @@ const Home = () => {
     alert('로그아웃되었습니다.');
   };
 
+  // 테마별 배경과 효과 설정
+  const getThemeBackground = () => {
+    switch(currentTheme.name) {
+      case 'cyberpunk':
+        return (
+          <>
+            <div className="absolute inset-0 bg-cyber-grid bg-[size:50px_50px] opacity-30"></div>
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyber-secondary/20 rounded-full blur-3xl animate-pulse-slow delay-700"></div>
+          </>
+        );
+      case 'minimal':
+        return (
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-100 to-white opacity-50"></div>
+        );
+      default: // space
+        return (
+          <>
+            <div className="absolute inset-0 bg-[url('/bg-stars.png')] bg-repeat opacity-30"></div>
+            <div className="absolute top-1/4 -left-32 w-96 h-96 bg-space-purple/30 rounded-full blur-3xl animate-pulse-slow"></div>
+            <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-space-accent/20 rounded-full blur-3xl animate-pulse-slow delay-700"></div>
+          </>
+        );
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-space-dark text-white">
+    <div className={`min-h-screen ${currentTheme.mainBg} ${currentTheme.textColor} transition-colors duration-700`}>
       {/* 헤더/네비게이션은 별도 컴포넌트로 분리 */}
       
       {/* 히어로 섹션 */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-28">
         {/* 배경 효과 */}
-        <div className="absolute inset-0 bg-[url('/bg-stars.png')] bg-repeat opacity-30"></div>
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-space-purple/30 rounded-full blur-3xl animate-pulse-slow"></div>
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-space-accent/20 rounded-full blur-3xl animate-pulse-slow delay-700"></div>
+        {getThemeBackground()}
         
         {/* 컨텐츠 */}
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight">
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-space-accent to-space-purple">
+          <h1 className={`text-5xl md:text-7xl font-bold ${currentTheme.headingColor} mb-8 tracking-tight ${currentTheme.name === 'cyberpunk' ? 'font-cyber animate-glow' : ''} transition-all duration-700`}>
+            <span className={`block ${currentTheme.name === 'space' ? 'text-transparent bg-clip-text bg-gradient-to-r from-space-accent to-space-purple' : currentTheme.name === 'cyberpunk' ? 'text-cyber-primary' : 'text-minimal-primary'}`}>
               MARVIS
             </span>
             <span className="block">AI 갤러리 & 블로그</span>
           </h1>
-          <p className="max-w-2xl mx-auto text-xl md:text-2xl text-space-light/80 mb-12">
+          <p className={`max-w-2xl mx-auto text-xl md:text-2xl ${currentTheme.textColor}/80 mb-12`}>
             AI 생성 이미지 갤러리와 블로그를 한 곳에서 경험하세요.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button
               onClick={() => navigate('/gallery')}
-              className="px-8 py-3 bg-space-accent hover:bg-space-glow transition-colors text-white rounded-xl text-lg font-medium"
+              className={`px-8 py-3 ${currentTheme.buttonBg} hover:${currentTheme.buttonHoverBg} transition-colors text-white rounded-xl text-lg font-medium`}
             >
               갤러리 보기
             </button>
             <button
               onClick={() => navigate('/blog')}
-              className="px-8 py-3 bg-space-accent/20 hover:bg-space-accent/30 border border-space-accent/40 transition-colors text-white rounded-xl text-lg font-medium"
+              className={`px-8 py-3 ${currentTheme.buttonBg} hover:${currentTheme.buttonHoverBg} transition-colors text-white rounded-xl text-lg font-medium`}
             >
               블로그 보기
             </button>
-          </div>
-
-          {/* 관리자 로그인/로그아웃 버튼 (테스트용) */}
-          <div className="mt-4 flex justify-center space-x-4">
-            {!isAdmin ? (
-              <button
-                onClick={handleAutoLogin}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg"
-              >
-                관리자 로그인 (테스트용)
-              </button>
-            ) : (
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg"
-              >
-                관리자 로그아웃
-              </button>
-            )}
           </div>
         </div>
       </section>
@@ -159,10 +166,10 @@ const Home = () => {
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-space-light mb-4">
+            <h2 className={`text-3xl md:text-4xl font-bold ${currentTheme.headingColor} mb-4 ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>
               주요 기능
             </h2>
-            <p className="text-lg text-space-light/70 max-w-2xl mx-auto">
+            <p className={`text-lg ${currentTheme.textColor}/70 max-w-2xl mx-auto`}>
               우리 플랫폼의 핵심 기능들을 살펴보세요.
             </p>
           </div>
@@ -170,13 +177,13 @@ const Home = () => {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="bg-space-navy/30 border border-space-light/10 rounded-lg p-6 text-center hover:bg-space-navy/50 transition-colors"
+                className={`${currentTheme.secondaryBg} border border-${currentTheme.textColor}/10 rounded-lg p-6 text-center hover:bg-opacity-70 transition-colors duration-300`}
               >
-                <div className="flex justify-center items-center mb-4 text-space-accent">
+                <div className={`flex justify-center items-center mb-4 ${currentTheme.accentColor}`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold mb-2 text-space-light">{feature.title}</h3>
-                <p className="text-space-light/70">{feature.description}</p>
+                <h3 className={`text-xl font-semibold mb-2 ${currentTheme.headingColor}`}>{feature.title}</h3>
+                <p className={`${currentTheme.textColor}/70`}>{feature.description}</p>
               </div>
             ))}
           </div>
@@ -187,10 +194,10 @@ const Home = () => {
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-10">
-            <h2 className="text-3xl font-bold text-space-light">인기 갤러리</h2>
+            <h2 className={`text-3xl font-bold ${currentTheme.headingColor} ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>인기 갤러리</h2>
             <Link
               to="/gallery"
-              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+              className={`${currentTheme.accentColor} hover:${currentTheme.buttonHoverBg} transition-colors flex items-center gap-1`}
             >
               <span>더 보기</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -206,22 +213,22 @@ const Home = () => {
                   onClick={() => navigate(`/gallery/${image.id}`)}
                   className="cursor-pointer group"
                 >
-                  <div className="relative aspect-square overflow-hidden rounded-lg bg-space-navy/50">
+                  <div className={`relative aspect-square overflow-hidden rounded-lg ${currentTheme.secondaryBg}`}>
                     <img
                       src={image.imageUrl}
                       alt={image.title}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-space-dark/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                      <h3 className="text-xl font-semibold text-white mb-1">{image.title}</h3>
-                      <p className="text-space-light/80 line-clamp-2">{image.description}</p>
+                    <div className={`absolute inset-0 bg-gradient-to-t from-${currentTheme.mainBg}/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4`}>
+                      <h3 className={`text-xl font-semibold ${currentTheme.headingColor} mb-1`}>{image.title}</h3>
+                      <p className={`${currentTheme.textColor}/80 line-clamp-2`}>{image.description}</p>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="col-span-3 text-center py-8">
-                <p className="text-space-light/60">아직 등록된 이미지가 없습니다. 첫 번째 이미지를 업로드해보세요!</p>
+                <p className={`${currentTheme.textColor}/60`}>아직 등록된 이미지가 없습니다. 첫 번째 이미지를 업로드해보세요!</p>
               </div>
             )}
           </div>
@@ -232,10 +239,10 @@ const Home = () => {
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-10">
-            <h2 className="text-3xl font-bold text-space-light">최신 블로그</h2>
+            <h2 className={`text-3xl font-bold ${currentTheme.headingColor} ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>최신 블로그</h2>
             <Link
               to="/blog"
-              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+              className={`${currentTheme.accentColor} hover:${currentTheme.buttonHoverBg} transition-colors flex items-center gap-1`}
             >
               <span>더 보기</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -249,16 +256,16 @@ const Home = () => {
                 <Link
                   key={post.id}
                   to={`/blog/${post.id}`}
-                  className="bg-space-navy/30 border border-space-light/10 rounded-lg overflow-hidden hover:bg-space-navy/50 transition-colors"
+                  className={`${currentTheme.secondaryBg} border border-${currentTheme.textColor}/10 rounded-lg overflow-hidden hover:bg-opacity-70 transition-colors`}
                 >
                   <div className="p-6">
-                    <h3 className="text-xl font-semibold mb-2 text-space-light line-clamp-2">
+                    <h3 className={`text-xl font-semibold mb-2 ${currentTheme.headingColor} line-clamp-2 ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>
                       {post.title}
                     </h3>
-                    <p className="text-space-light/70 mb-4 line-clamp-3">
+                    <p className={`${currentTheme.textColor}/70 mb-4 line-clamp-3`}>
                       {post.content.substring(0, 100)}...
                     </p>
-                    <div className="flex justify-between items-center text-sm text-space-light/50">
+                    <div className={`flex justify-between items-center text-sm ${currentTheme.textColor}/50`}>
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                       <div className="flex items-center gap-2">
                         <span className="flex items-center">
@@ -276,7 +283,7 @@ const Home = () => {
               ))
             ) : (
               <div className="col-span-3 text-center py-8">
-                <p className="text-space-light/60">아직 등록된 블로그 글이 없습니다. 첫 번째 글을 작성해보세요!</p>
+                <p className={`${currentTheme.textColor}/60`}>아직 등록된 블로그 글이 없습니다. 첫 번째 글을 작성해보세요!</p>
               </div>
             )}
           </div>
@@ -287,10 +294,10 @@ const Home = () => {
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-10">
-            <h2 className="text-3xl font-bold text-space-light">인기 AI 도구</h2>
+            <h2 className={`text-3xl font-bold ${currentTheme.headingColor} ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>인기 AI 도구</h2>
             <Link
               to="/ai-tools"
-              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+              className={`${currentTheme.accentColor} hover:${currentTheme.buttonHoverBg} transition-colors flex items-center gap-1`}
             >
               <span>더 보기</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -304,17 +311,17 @@ const Home = () => {
                 <Link
                   key={tool.id}
                   to={`/ai-tools/${tool.id}`}
-                  className="bg-space-navy/30 border border-space-light/10 rounded-lg p-6 hover:bg-space-navy/50 transition-colors"
+                  className={`${currentTheme.secondaryBg} border border-${currentTheme.textColor}/10 rounded-lg p-6 hover:bg-opacity-70 transition-colors`}
                 >
-                  <h3 className="text-xl font-semibold mb-2 text-space-light">
+                  <h3 className={`text-xl font-semibold mb-2 ${currentTheme.headingColor} ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>
                     {tool.name}
                   </h3>
-                  <p className="text-space-light/70 mb-4 line-clamp-3">
+                  <p className={`${currentTheme.textColor}/70 mb-4 line-clamp-3`}>
                     {tool.description}
                   </p>
                   <div className="flex justify-between items-center">
-                    <span className="text-space-accent text-sm">{tool.category}</span>
-                    <div className="flex items-center gap-2 text-sm text-space-light/50">
+                    <span className={currentTheme.accentColor}>{tool.category}</span>
+                    <div className={`flex items-center gap-2 text-sm ${currentTheme.textColor}/50`}>
                       <span className="flex items-center">
                         <span className="mr-1">❤️</span>
                         {tool.likes || 0}
@@ -329,7 +336,7 @@ const Home = () => {
               ))
             ) : (
               <div className="col-span-3 text-center py-8">
-                <p className="text-space-light/60">곧 다양한 AI 도구가 추가될 예정입니다!</p>
+                <p className={`${currentTheme.textColor}/60`}>곧 다양한 AI 도구가 추가될 예정입니다!</p>
               </div>
             )}
           </div>
@@ -337,45 +344,45 @@ const Home = () => {
       </section>
 
       {/* 푸터 */}
-      <footer className="bg-space-navy/50 py-12">
+      <footer className={`${currentTheme.secondaryBg} py-12 transition-colors duration-700`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-8 md:mb-0">
-              <h2 className="text-2xl font-bold text-space-light mb-2">MARVIS</h2>
-              <p className="text-space-light/60">AI 생성 아트와 컨텐츠의 세계로 오신 것을 환영합니다.</p>
+              <h2 className={`text-2xl font-bold ${currentTheme.headingColor} mb-2 ${currentTheme.name === 'cyberpunk' ? 'font-cyber' : ''}`}>MARVIS</h2>
+              <p className={`${currentTheme.textColor}/60`}>AI 생성 아트와 컨텐츠의 세계로 오신 것을 환영합니다.</p>
             </div>
             <div className="flex flex-col md:flex-row gap-8">
               <div>
-                <h3 className="text-lg font-medium text-space-light mb-3">바로가기</h3>
+                <h3 className={`text-lg font-medium ${currentTheme.headingColor} mb-3`}>바로가기</h3>
                 <ul className="space-y-2">
                   <li>
-                    <Link to="/gallery" className="text-space-light/60 hover:text-space-light transition-colors">
+                    <Link to="/gallery" className={`${currentTheme.textColor}/60 hover:${currentTheme.textColor} transition-colors`}>
                       갤러리
                     </Link>
                   </li>
                   <li>
-                    <Link to="/blog" className="text-space-light/60 hover:text-space-light transition-colors">
+                    <Link to="/blog" className={`${currentTheme.textColor}/60 hover:${currentTheme.textColor} transition-colors`}>
                       블로그
                     </Link>
                   </li>
                   <li>
-                    <Link to="/ai-tools" className="text-space-light/60 hover:text-space-light transition-colors">
+                    <Link to="/ai-tools" className={`${currentTheme.textColor}/60 hover:${currentTheme.textColor} transition-colors`}>
                       AI 도구
                     </Link>
                   </li>
                 </ul>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-space-light mb-3">연락처</h3>
+                <h3 className={`text-lg font-medium ${currentTheme.headingColor} mb-3`}>연락처</h3>
                 <ul className="space-y-2">
-                  <li className="text-space-light/60">
+                  <li className={`${currentTheme.textColor}/60`}>
                     이메일: kimpastor0191@gmail.com
                   </li>
                 </ul>
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-space-light/10 text-center text-space-light/40 text-sm">
+          <div className={`mt-8 pt-8 border-t border-${currentTheme.textColor}/10 text-center ${currentTheme.textColor}/40 text-sm`}>
             <p>© 2023 MARVIS. All rights reserved.</p>
           </div>
         </div>
