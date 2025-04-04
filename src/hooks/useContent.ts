@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { GalleryImage, BlogPost, AITool } from '../types';
 
+type ContentType = GalleryImage | BlogPost | AITool;
+type StorageKeyMap = {
+  gallery: GalleryImage[];
+  blog: BlogPost[];
+  aiTools: AITool[];
+};
+
 interface ContentHook<T> {
   items: T[];
   addItem: (item: T) => Promise<void>;
@@ -9,35 +16,55 @@ interface ContentHook<T> {
   incrementLikes: (id: string) => Promise<void>;
   incrementViews: (id: string) => Promise<void>;
   setFeatured: (id: string, featured: boolean) => Promise<void>;
-  getFeaturedItems: () => T[];
+  getFeaturedItems: (limit?: number) => T[];
   getUserItems: (userId: string) => T[];
 }
 
-export function useContent<T extends { id: string; likes: number; views: number; isFeatured: boolean; userId: string }>(
-  storageKey: string
+const getStorageKey = (key: keyof StorageKeyMap): string => {
+  const keyMap: Record<keyof StorageKeyMap, string> = {
+    gallery: 'galleryImages',
+    blog: 'blogPosts',
+    aiTools: 'aiTools'
+  };
+  return keyMap[key];
+};
+
+export function useContent<T extends ContentType>(
+  contentType: keyof StorageKeyMap
 ): ContentHook<T> {
-  const [items, setItems] = useState<T[]>([]);
+  const [items, setItems] = useState<T[]>(() => {
+    const savedItems = localStorage.getItem(getStorageKey(contentType));
+    return savedItems ? JSON.parse(savedItems) : [];
+  });
 
   useEffect(() => {
-    const savedItems = localStorage.getItem(storageKey);
+    const savedItems = localStorage.getItem(getStorageKey(contentType));
     if (savedItems) {
       setItems(JSON.parse(savedItems));
     }
-  }, [storageKey]);
+  }, [contentType]);
 
   const saveItems = async (newItems: T[]) => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(newItems));
+      localStorage.setItem(getStorageKey(contentType), JSON.stringify(newItems));
       setItems(newItems);
     } catch (error) {
-      console.error(`Error saving ${storageKey}:`, error);
-      throw new Error(`Failed to save ${storageKey}`);
+      console.error(`Error saving ${contentType}:`, error);
+      throw new Error(`Failed to save ${contentType}`);
     }
   };
 
   const addItem = async (item: T) => {
     try {
-      const newItems = [...items, { ...item, likes: 0, views: 0, isFeatured: false }];
+      const newItem = {
+        ...item,
+        likes: 0,
+        views: 0,
+        isFeatured: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      const newItems = [...items, newItem];
       await saveItems(newItems);
     } catch (error) {
       console.error('Error adding item:', error);
@@ -53,7 +80,14 @@ export function useContent<T extends { id: string; likes: number; views: number;
       }
 
       const newItems = items.map(item =>
-        item.id === id ? { ...updatedItem, views: item.views, likes: item.likes } : item
+        item.id === id
+          ? {
+              ...updatedItem,
+              views: item.views,
+              likes: item.likes,
+              updatedAt: new Date().toISOString()
+            }
+          : item
       );
       await saveItems(newItems);
     } catch (error) {
@@ -128,10 +162,12 @@ export function useContent<T extends { id: string; likes: number; views: number;
     }
   };
 
-  const getFeaturedItems = () => {
-    return items
-      .filter(item => item.isFeatured)
-      .sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  const getFeaturedItems = (limit?: number) => {
+    const sortedItems = items
+      .sort((a, b) => ((b.likes || 0) + (b.views || 0)) - ((a.likes || 0) + (a.views || 0)));
+    
+    // limit이 있으면 그 개수만큼, 아니면 모든 아이템 반환
+    return limit ? sortedItems.slice(0, limit) : sortedItems;
   };
 
   const getUserItems = (userId: string) => {

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from '../components/SearchBar';
 import ImageCard from '../components/ImageCard';
 import AdminModal from '../components/AdminModal';
 import useAdmin from '../hooks/useAdmin';
+import { useContent } from '../hooks/useContent';
+import { GalleryImage } from '../types';
 
 const categories = [
   { id: 1, value: 'automotive', label: 'Automotive', brand: 'Rolls-Royce' },
@@ -18,69 +20,29 @@ const categories = [
   { id: 10, value: 'yachts', label: 'Yachts', brand: 'La Cornue' }
 ];
 
-interface GalleryImage {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  url: string;
-  tags: string[];
-  createdAt: string;
-}
-
 const Gallery = () => {
   const navigate = useNavigate();
   const { isAdmin, isModalOpen, error, openModal, closeModal, verifyPassword } = useAdmin();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
-
-  // 로컬 스토리지에서 이미지 데이터 로드
-  useEffect(() => {
-    const savedImages = localStorage.getItem('galleryImages');
-    if (savedImages) {
-      setGalleryImages(JSON.parse(savedImages));
-    }
-  }, []);
-
-  // 이미지 데이터 저장
-  const saveImages = (images: GalleryImage[]) => {
-    localStorage.setItem('galleryImages', JSON.stringify(images));
-    setGalleryImages(images);
-  };
-
-  // 새 이미지 추가
-  const addImage = (image: GalleryImage) => {
-    const newImages = [...galleryImages, image];
-    saveImages(newImages);
-  };
-
-  // 이미지 삭제
-  const deleteImage = (imageId: string) => {
-    const newImages = galleryImages.filter(img => img.id !== imageId);
-    saveImages(newImages);
-  };
+  const { items: galleryImages } = useContent<GalleryImage>('gallery');
+  const [searchResults, setSearchResults] = useState<GalleryImage[]>(galleryImages);
 
   const handleSearch = (query: string) => {
-    // 검색어가 있는 경우 필터링
     if (query.trim()) {
       const filtered = galleryImages.filter(image => 
         image.title.toLowerCase().includes(query.toLowerCase()) ||
         image.description.toLowerCase().includes(query.toLowerCase()) ||
-        image.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+        image.tags?.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
       );
-      setGalleryImages(filtered);
+      setSearchResults(filtered);
     } else {
-      // 검색어가 없는 경우 전체 데이터 복원
-      const savedImages = localStorage.getItem('galleryImages');
-      if (savedImages) {
-        setGalleryImages(JSON.parse(savedImages));
-      }
+      setSearchResults(galleryImages);
     }
   };
 
   const handleCreateClick = () => {
     if (isAdmin) {
-      navigate('/create-image');
+      navigate('/gallery/create');
     } else {
       openModal();
     }
@@ -90,15 +52,15 @@ const Gallery = () => {
     try {
       await verifyPassword(password);
       closeModal();
-      navigate('/create-image');
+      navigate('/gallery/create');
     } catch (err) {
       console.error('잘못된 비밀번호입니다.', err);
     }
   };
 
   const filteredImages = selectedCategory === 'all'
-    ? galleryImages
-    : galleryImages.filter(image => image.category === selectedCategory);
+    ? searchResults
+    : searchResults.filter(image => image.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-space-dark bg-[size:50px_50px] relative overflow-hidden">
@@ -201,7 +163,7 @@ const Gallery = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         onSubmit={handlePasswordSubmit}
-        error={error || undefined}
+        error={error}
       />
     </div>
   );

@@ -1,40 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useContent } from '../hooks/useContent';
-import { useAdmin } from '../hooks/useAdmin';
+import useAdmin from '../hooks/useAdmin';
 import { BlogPost } from '../types';
 import ReactMarkdown from 'react-markdown';
 
-export default function BlogDetail() {
+const BlogDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { items, deleteItem, incrementViews, incrementLikes } = useContent<BlogPost>('blog');
   const { isAdmin } = useAdmin();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [viewIncremented, setViewIncremented] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+
+  // 콘솔에 관리자 상태 출력 (디버깅 용도)
+  useEffect(() => {
+    console.log('블로그 상세 페이지 - 관리자 상태:', isAdmin);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (id) {
       const foundPost = items.find(p => p.id === id);
       if (foundPost) {
         setPost(foundPost);
+        // 좋아요 상태 로드
+        const likedStatus = localStorage.getItem(`blog_liked_${id}`);
+        setIsLiked(likedStatus === 'true');
         if (!viewIncremented) {
-          incrementViews(id).catch(console.error);
-          setViewIncremented(true);
+          incrementViews(id).then(() => {
+            setViewIncremented(true);
+          }).catch(error => {
+            console.error('Error incrementing views:', error);
+          });
         }
       }
     }
   }, [id, items, incrementViews, viewIncremented]);
 
   const handleLike = async () => {
-    if (post) {
-      try {
-        await incrementLikes(post.id);
-      } catch (error) {
-        console.error('좋아요 처리 중 오류 발생:', error);
-        alert('좋아요 처리 중 오류가 발생했습니다.');
-      }
+    if (!post) return;
+    try {
+      await incrementLikes(post.id);
+      // 좋아요 상태 업데이트 및 로컬 스토리지 저장
+      localStorage.setItem(`blog_liked_${id}`, 'true');
+      setIsLiked(true);
+      // 상태 업데이트 반영
+      setPost(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null);
+    } catch (error) {
+      console.error('좋아요 처리 중 오류 발생:', error);
+      alert('좋아요 처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -44,35 +59,29 @@ export default function BlogDetail() {
       return;
     }
 
-    if (!post || isDeleting) return;
+    if (!post) return;
 
-    const confirmed = window.confirm('이 게시글을 삭제하시겠습니까?');
-    if (confirmed) {
+    if (window.confirm('이 게시글을 삭제하시겠습니까?')) {
       try {
-        setIsDeleting(true);
         await deleteItem(post.id);
         navigate('/blog');
       } catch (error) {
         console.error('게시글 삭제 중 오류 발생:', error);
         alert('게시글 삭제 중 오류가 발생했습니다.');
-      } finally {
-        setIsDeleting(false);
       }
     }
   };
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-space-dark flex items-center justify-center">
-        <div className="text-space-light text-center">
-          <p className="text-xl">게시글을 찾을 수 없습니다.</p>
-          <button
-            onClick={() => navigate('/blog')}
-            className="mt-4 text-space-glow hover:text-space-glow/70 transition-colors"
-          >
-            블로그로 돌아가기
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-space-dark text-space-light">
+        <p className="text-2xl mb-4">게시글을 불러오는 중...</p>
+        <button
+          onClick={() => navigate('/blog')}
+          className="px-4 py-2 bg-space-accent text-white rounded-lg hover:bg-space-glow transition-colors"
+        >
+          블로그로 돌아가기
+        </button>
       </div>
     );
   }
@@ -87,76 +96,80 @@ export default function BlogDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-space-dark bg-[size:50px_50px] relative overflow-hidden py-24">
-      <div className="absolute inset-0 bg-star-pattern opacity-10"></div>
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-space-dark text-space-light pt-24 pb-12 px-4 md:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Back Button */}
         <button
           onClick={() => navigate('/blog')}
-          className="mb-6 flex items-center gap-2 text-space-light/70 hover:text-space-light transition-colors"
+          className="mb-8 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-space-accent hover:bg-space-glow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-space-glow"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
           </svg>
-          <span>블로그로 돌아가기</span>
+          블로그로 돌아가기
         </button>
 
-        <article className="bg-space-navy/30 border border-space-light/10 rounded-lg overflow-hidden">
-          <div className="p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-4xl font-bold text-space-light">{post.title}</h1>
-              <div className="flex items-center gap-4">
+        <article className="bg-space-navy p-6 md:p-8 rounded-lg shadow-xl border border-space-light/10">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-space-light">{post.title}</h1>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleLike}
+                disabled={isLiked}
+                className={`flex items-center space-x-1 px-4 py-2 rounded-lg transition-colors ${isLiked ? 'text-space-light/50 bg-space-navy/50 cursor-not-allowed' : 'text-space-light hover:bg-space-glow/20'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isLiked ? 'text-red-500' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                </svg>
+                <span>{post.likes || 0}</span>
+              </button>
+              {/* 항상 수정/삭제 버튼 표시 */}
+              <div className="flex space-x-2">
+                <Link
+                  to={`/blog/edit/${post.id}`}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                >
+                  수정
+                </Link>
                 <button
-                  onClick={handleLike}
-                  className="flex items-center gap-2 px-4 py-2 bg-space-navy/50 rounded-lg text-space-light hover:bg-space-navy/70 transition-colors"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
                 >
-                  <span>❤️</span>
-                  <span>{post.likes || 0}</span>
+                  삭제
                 </button>
-                {isAdmin && (
-                  <>
-                    <button
-                      onClick={() => navigate(`/blog/edit/${post.id}`)}
-                      className="px-4 py-2 bg-space-accent/20 text-space-light rounded-lg hover:bg-space-accent/30 transition-colors"
-                    >
-                      수정
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
-                    >
-                      {isDeleting ? '삭제 중...' : '삭제'}
-                    </button>
-                  </>
-                )}
               </div>
             </div>
-            <div className="flex items-center gap-4 mb-8 text-space-light/70">
-              <time dateTime={post.createdAt}>{formatDate(post.createdAt)}</time>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center">
-                  <span className="mr-1">👁️</span>
-                  {post.views || 0}
-                </span>
-              </div>
-              <span className="text-space-light/50">{post.category}</span>
+          </div>
+          <div className="flex items-center gap-4 mb-8 text-space-light/70">
+            <time dateTime={post.createdAt}>{formatDate(post.createdAt)}</time>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center space-x-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                </svg>
+                <span>{post.views || 0}</span>
+              </span>
             </div>
-            <div className="prose prose-invert max-w-none">
-              <ReactMarkdown>{post.content}</ReactMarkdown>
-            </div>
-            <div className="mt-8 flex flex-wrap gap-2">
-              {post.tags?.map((tag, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-space-navy/50 text-space-light/70 rounded-full text-sm"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
+            <span className="text-space-light/50">{post.category}</span>
+          </div>
+          <div className="prose prose-invert max-w-none mb-8">
+            <ReactMarkdown>{post.content}</ReactMarkdown>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {post.tags?.map((tag, index) => (
+              <span
+                key={index}
+                className="px-3 py-1 bg-space-accent/20 rounded-full text-sm text-space-accent"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         </article>
       </div>
     </div>
   );
-} 
+};
+
+export default BlogDetail; 

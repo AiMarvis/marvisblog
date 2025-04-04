@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Gallery from './pages/Gallery';
@@ -18,15 +18,23 @@ const App = () => {
       <div className="min-h-screen bg-space-dark">
         <Navbar />
         <Routes>
+          {/* 홈 */}
           <Route path="/" element={<Home />} />
-          <Route path="/gallery" element={<Gallery />} />
+          
+          {/* 갤러리 라우트 - 순서 중요! */}
+          <Route path="/gallery/create" element={<CreateImage />} />
+          <Route path="/gallery/edit/:id" element={<CreateImage />} />
           <Route path="/gallery/:id" element={<ImageDetail />} />
-          <Route path="/blog" element={<Blog />} />
+          <Route path="/gallery" element={<Gallery />} />
+          
+          {/* 블로그 라우트 */}
           <Route path="/blog/:id" element={<BlogDetail />} />
-          <Route path="/ai-tools" element={<AITools />} />
-          <Route path="/ai-tools/:id" element={<ToolDetail />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/create-post" element={<CreatePost />} />
-          <Route path="/create-image" element={<CreateImage />} />
+          
+          {/* AI 도구 라우트 */}
+          <Route path="/ai-tools/:id" element={<ToolDetail />} />
+          <Route path="/ai-tools" element={<AITools />} />
           <Route path="/create-tool" element={<CreateTool />} />
         </Routes>
       </div>

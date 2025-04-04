@@ -10,7 +10,7 @@ interface AdminHook {
   logout: () => void;
 }
 
-const ADMIN_PASSWORD = 'admin123'; // 실제 구현시 환경 변수나 서버에서 관리
+const ADMIN_PASSWORD = 'rkdtks34?'; // 실제 구현시 환경 변수나 서버에서 관리
 const ADMIN_TOKEN_KEY = 'adminToken';
 
 export function useAdmin(): AdminHook {

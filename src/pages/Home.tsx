@@ -1,422 +1,385 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import SearchBar from '../components/SearchBar';
 import ImageCard from '../components/ImageCard';
 import { useContent } from '../hooks/useContent';
 import { GalleryImage, BlogPost, AITool } from '../types';
+import useAdmin from '../hooks/useAdmin';
 
-// 추천 이미지 데이터
-const featuredImages: any[] = [];
-
-// 블로그 포스트 데이터
-const blogPosts: any[] = [];
-
-const exploreCategories = [
+// 핵심 기능
+const features = [
   {
-    id: 1,
-    title: 'Automotive',
-    description: 'Luxury cars and automotive excellence',
-    brand: 'Rolls-Royce',
-    image: '/images/categories/automotive.jpg'
+    title: '갤러리',
+    description: 'AI로 생성된 고품질 이미지 컬렉션을 감상하고, 다운로드하세요.',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )
   },
   {
-    id: 2,
-    title: 'Fashion',
-    description: 'High-end fashion and accessories',
-    brand: 'Chanel',
-    image: '/images/categories/fashion.jpg'
+    title: '블로그',
+    description: 'AI 기술과 디지털 아트에 관한 인사이트 가득한 블로그 포스트를 읽어보세요.',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+      </svg>
+    )
   },
   {
-    id: 3,
-    title: 'Furniture',
-    description: 'Luxury furniture and home decor',
-    brand: 'Minotti',
-    image: '/images/categories/furniture.jpg'
-  },
-  {
-    id: 4,
-    title: 'Watches',
-    description: 'Premium timepieces and luxury watches',
-    brand: 'Patek Philippe',
-    image: '/images/categories/watches.jpg'
-  },
-  {
-    id: 5,
-    title: 'Technology',
-    description: 'Premium electronics and gadgets',
-    brand: 'Apple',
-    image: '/images/categories/technology.jpg'
-  },
-  {
-    id: 6,
-    title: 'Fashion Accessories',
-    description: 'Luxury bags and accessories',
-    brand: 'Hermès',
-    image: '/images/categories/accessories.jpg'
-  },
-  {
-    id: 7,
-    title: 'Jewelry',
-    description: 'Fine jewelry and precious stones',
-    brand: 'Cartier',
-    image: '/images/categories/jewelry.jpg'
-  },
-  {
-    id: 8,
-    title: 'Hotels',
-    description: 'Luxury hotels and resorts',
-    brand: 'Feadship',
-    image: '/images/categories/hotels.jpg'
-  },
-  {
-    id: 9,
-    title: 'Private Jets',
-    description: 'Private aviation and luxury jets',
-    brand: 'Gulfstream',
-    image: '/images/categories/jets.jpg'
-  },
-  {
-    id: 10,
-    title: 'Yachts',
-    description: 'Luxury yachts and marine vessels',
-    brand: 'La Cornue',
-    image: '/images/categories/yachts.jpg'
+    title: 'AI 도구',
+    description: '최신 AI 이미지 생성 도구를 직접 사용해보고, 자신만의 작품을 만들어보세요.',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    )
   }
 ];
 
 const Home = () => {
+  const navigate = useNavigate();
+  const { verifyPassword, isAdmin, logout } = useAdmin();
+
   const {
     items: galleryImages,
-    getFeaturedItems: getFeaturedImages
-  } = useContent<GalleryImage>('galleryImages');
-
+    getFeaturedItems: getFeaturedGalleryImages
+  } = useContent<GalleryImage>('gallery');
+  
   const {
     items: blogPosts,
-    getFeaturedItems: getFeaturedPosts
-  } = useContent<BlogPost>('blogPosts');
-
+    getFeaturedItems: getFeaturedBlogPosts
+  } = useContent<BlogPost>('blog');
+  
   const {
     items: aiTools,
-    getFeaturedItems: getFeaturedTools
+    getFeaturedItems: getFeaturedAITools
   } = useContent<AITool>('aiTools');
 
-  const [latestImages, setLatestImages] = useState<GalleryImage[]>([]);
-  const [latestPosts, setLatestPosts] = useState<BlogPost[]>([]);
-  const [latestTools, setLatestTools] = useState<AITool[]>([]);
-  const [featuredImages, setFeaturedImages] = useState<GalleryImage[]>([]);
+  const [featuredGalleryImages, setFeaturedGalleryImages] = useState<GalleryImage[]>([]);
+  const [featuredBlogPosts, setFeaturedBlogPosts] = useState<BlogPost[]>([]);
+  const [featuredAITools, setFeaturedAITools] = useState<AITool[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // 최신 항목들 설정
-    setLatestImages(galleryImages.slice(-3).reverse());
-    setLatestPosts(blogPosts.slice(-3).reverse());
-    setLatestTools(aiTools.slice(-3).reverse());
-
-    // Featured 이미지 설정 (좋아요 순으로 정렬)
-    const featured = getFeaturedImages()
-      .sort((a, b) => (b.likes + b.views) - (a.likes + a.views))
-      .slice(0, 3);
-    setFeaturedImages(featured);
-  }, [galleryImages, blogPosts, aiTools]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(date);
-  };
-
-  const renderPostContent = (post: BlogPost) => {
-    const previewContent = post.content.slice(0, 100) + (post.content.length > 100 ? '...' : '');
-    
-    switch (post.editorMode) {
-      case 'markdown':
-        return <ReactMarkdown>{previewContent}</ReactMarkdown>;
-      case 'html':
-        return <div dangerouslySetInnerHTML={{ __html: previewContent }} />;
-      default:
-        return <div style={{ whiteSpace: 'pre-wrap' }}>{previewContent}</div>;
-    }
-  };
+    setFeaturedGalleryImages(getFeaturedGalleryImages(3));
+    setFeaturedBlogPosts(getFeaturedBlogPosts(3));
+    setFeaturedAITools(getFeaturedAITools(3));
+  }, [galleryImages, blogPosts, aiTools, getFeaturedGalleryImages, getFeaturedBlogPosts, getFeaturedAITools]);
 
   const handleSearch = (query: string) => {
-    console.log('Searching for:', query);
+    setSearchQuery(query);
     // TODO: Implement search functionality
   };
 
+  // 자동 관리자 로그인 함수
+  const handleAutoLogin = async () => {
+    try {
+      const password = prompt('관리자 비밀번호를 입력하세요:');
+      if (!password) return;
+      
+      const success = await verifyPassword(password);
+      if (success) {
+        alert('관리자로 로그인되었습니다!');
+      } else {
+        alert('비밀번호가 일치하지 않습니다.');
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      alert('관리자 로그인에 실패했습니다.');
+    }
+  };
+
+  // 로그아웃 함수
+  const handleLogout = () => {
+    logout();
+    alert('로그아웃되었습니다.');
+  };
+
   return (
-    <div className="min-h-screen bg-space-dark bg-[size:50px_50px] relative overflow-hidden">
-      {/* Star background effect */}
-      <div className="absolute inset-0 bg-star-pattern opacity-10"></div>
+    <div className="min-h-screen bg-space-dark text-white">
+      {/* 헤더/네비게이션은 별도 컴포넌트로 분리 */}
       
-      {/* Animated gradient orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-space-purple/30 rounded-full blur-3xl animate-pulse-slow"></div>
-      <div className="absolute top-1/3 -right-32 w-96 h-96 bg-space-accent/20 rounded-full blur-3xl animate-pulse-slow delay-700"></div>
-      
-      {/* Content */}
-      <div className="relative">
-        {/* Hero Section with Search */}
-        <div className="relative pt-24 pb-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h1 className="text-4xl md:text-6xl font-bold text-space-light mb-4 tracking-tight">
-                Explore the Universe of AI Art
-              </h1>
-              <p className="text-xl text-space-light/80 max-w-2xl mx-auto">
-                Discover and share amazing AI-generated images in our cosmic community
-              </p>
-            </div>
-            <SearchBar onSearch={handleSearch} />
+      {/* 히어로 섹션 */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28">
+        {/* 배경 효과 */}
+        <div className="absolute inset-0 bg-[url('/bg-stars.png')] bg-repeat opacity-30"></div>
+        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-space-purple/30 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-space-accent/20 rounded-full blur-3xl animate-pulse-slow delay-700"></div>
+        
+        {/* 컨텐츠 */}
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-space-accent to-space-purple">
+              MARVIS
+            </span>
+            <span className="block">AI 갤러리 & 블로그</span>
+          </h1>
+          <p className="max-w-2xl mx-auto text-xl md:text-2xl text-space-light/80 mb-12">
+            AI 생성 이미지 갤러리와 블로그를 한 곳에서 경험하세요.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+            <button
+              onClick={() => navigate('/gallery')}
+              className="px-8 py-3 bg-space-accent hover:bg-space-glow transition-colors text-white rounded-xl text-lg font-medium"
+            >
+              갤러리 보기
+            </button>
+            <button
+              onClick={() => navigate('/blog')}
+              className="px-8 py-3 bg-space-accent/20 hover:bg-space-accent/30 border border-space-accent/40 transition-colors text-white rounded-xl text-lg font-medium"
+            >
+              블로그 보기
+            </button>
+          </div>
+
+          {/* 관리자 로그인/로그아웃 버튼 (테스트용) */}
+          <div className="mt-4 flex justify-center space-x-4">
+            {!isAdmin ? (
+              <button
+                onClick={handleAutoLogin}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg"
+              >
+                관리자 로그인 (테스트용)
+              </button>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg"
+              >
+                관리자 로그아웃
+              </button>
+            )}
           </div>
         </div>
+      </section>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
-          {/* Categories */}
-          <div>
-            <h2 className="text-2xl font-bold text-space-light mb-6 flex items-center">
-              <span className="mr-2">🌌</span> Explore Categories
+      {/* 특징 섹션 */}
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-space-light mb-4">
+              주요 기능
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {exploreCategories.map((category) => (
-                <button
-                  key={category.id}
-                  className="p-4 rounded-xl bg-space-navy/50 backdrop-blur-sm border border-space-light/10 hover:border-space-glow/50 transition-colors text-center group"
+            <p className="text-lg text-space-light/70 max-w-2xl mx-auto">
+              우리 플랫폼의 핵심 기능들을 살펴보세요.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="bg-space-navy/30 border border-space-light/10 rounded-lg p-6 text-center hover:bg-space-navy/50 transition-colors"
+              >
+                <div className="flex justify-center items-center mb-4 text-space-accent">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-space-light">{feature.title}</h3>
+                <p className="text-space-light/70">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 갤러리 섹션 */}
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold text-space-light">인기 갤러리</h2>
+            <Link
+              to="/gallery"
+              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+            >
+              <span>더 보기</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredGalleryImages.length > 0 ? (
+              featuredGalleryImages.map((image) => (
+                <div
+                  key={image.id}
+                  onClick={() => navigate(`/gallery/${image.id}`)}
+                  className="cursor-pointer group"
                 >
-                  <span className="font-medium text-space-light/90 group-hover:text-space-light group-hover:scale-110 inline-block transition-all">
-                    {category.title}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Featured Section */}
-          <div>
-            <h2 className="text-2xl font-bold text-space-light mb-6 flex items-center">
-              <span className="mr-2">✨</span> 추천 작품
-            </h2>
-            {featuredImages.length === 0 ? (
-              <div className="text-center text-space-light/60 py-12 bg-space-navy/30 rounded-xl backdrop-blur-sm">
-                <p className="text-lg">아직 등록된 이미지가 없습니다.</p>
-                <p className="text-sm mt-2">갤러리에서 새로운 이미지를 등록해보세요!</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {featuredImages.map((image) => (
-                  <Link
-                    key={image.id}
-                    to={`/gallery/${image.id}`}
-                    className="group relative aspect-square overflow-hidden rounded-lg bg-space-navy/30 border border-space-light/10 hover:border-space-glow/30 transition-colors"
-                  >
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-space-navy/50">
                     <img
-                      src={image.url}
+                      src={image.imageUrl}
                       alt={image.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-space-dark/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-space-light font-medium mb-1">{image.title}</h3>
-                        <p className="text-space-light/70 text-sm line-clamp-2">{image.description}</p>
-                        <div className="flex items-center gap-4 mt-2">
-                          <span className="text-space-light/70 text-sm">
-                            {image.category}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-space-light/70 text-sm flex items-center">
-                              <span className="mr-1">❤️</span>
-                              {image.likes || 0}
-                            </span>
-                            <span className="text-space-light/70 text-sm flex items-center">
-                              <span className="mr-1">👁️</span>
-                              {image.views || 0}
-                            </span>
-                          </div>
-                          {image.tags && image.tags.length > 0 && (
-                            <div className="flex gap-2">
-                              {image.tags.slice(0, 2).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-1 bg-space-navy/50 rounded-full text-xs text-space-light/70"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-space-dark/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                      <h3 className="text-xl font-semibold text-white mb-1">{image.title}</h3>
+                      <p className="text-space-light/80 line-clamp-2">{image.description}</p>
                     </div>
-                  </Link>
-                ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-8">
+                <p className="text-space-light/60">아직 등록된 이미지가 없습니다. 첫 번째 이미지를 업로드해보세요!</p>
               </div>
             )}
           </div>
+        </div>
+      </section>
 
-          {/* Latest Gallery Images */}
-          <section className="mb-16">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-space-light">최신 이미지</h2>
-              <Link
-                to="/gallery"
-                className="text-space-glow hover:text-space-glow/70 transition-colors"
-              >
-                더 보기 →
-              </Link>
-            </div>
-            {latestImages.length === 0 ? (
-              <p className="text-space-light/70">아직 등록된 이미지가 없습니다.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {latestImages.map((image) => (
-                  <Link
-                    key={image.id}
-                    to={`/gallery/${image.id}`}
-                    className="group relative aspect-square overflow-hidden rounded-lg bg-space-navy/30 border border-space-light/10 hover:border-space-glow/30 transition-colors"
-                  >
-                    <img
-                      src={image.url}
-                      alt={image.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-space-dark/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-space-light font-medium mb-1">{image.title}</h3>
-                        <p className="text-space-light/70 text-sm line-clamp-2">{image.description}</p>
-                        <div className="flex items-center gap-4 mt-2">
-                          <span className="text-space-light/70 text-sm">
-                            {image.category}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-space-light/70 text-sm flex items-center">
-                              <span className="mr-1">❤️</span>
-                              {image.likes || 0}
-                            </span>
-                            <span className="text-space-light/70 text-sm flex items-center">
-                              <span className="mr-1">👁️</span>
-                              {image.views || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Latest Blog Posts */}
-          <section className="mb-16">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-space-light">최신 글</h2>
-              <Link
-                to="/blog"
-                className="text-space-glow hover:text-space-glow/70 transition-colors"
-              >
-                더 보기 →
-              </Link>
-            </div>
-            {latestPosts.length === 0 ? (
-              <p className="text-space-light/70">아직 작성된 글이 없습니다.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {latestPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    to={`/blog/${post.id}`}
-                    className="bg-space-navy/30 border border-space-light/10 rounded-lg p-6 hover:border-space-glow/30 transition-colors block"
-                  >
-                    <h3 className="text-xl font-semibold text-space-light mb-2">
+      {/* 블로그 섹션 */}
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold text-space-light">최신 블로그</h2>
+            <Link
+              to="/blog"
+              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+            >
+              <span>더 보기</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featuredBlogPosts.length > 0 ? (
+              featuredBlogPosts.map((post) => (
+                <Link
+                  key={post.id}
+                  to={`/blog/${post.id}`}
+                  className="bg-space-navy/30 border border-space-light/10 rounded-lg overflow-hidden hover:bg-space-navy/50 transition-colors"
+                >
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2 text-space-light line-clamp-2">
                       {post.title}
                     </h3>
-                    <div className="text-space-light/70 text-sm mb-4">
-                      {formatDate(post.createdAt)}
-                    </div>
-                    <div className="prose prose-invert max-w-none mb-4 text-sm">
-                      {renderPostContent(post)}
-                    </div>
-                    <div className="flex items-center justify-between">
+                    <p className="text-space-light/70 mb-4 line-clamp-3">
+                      {post.content.substring(0, 100)}...
+                    </p>
+                    <div className="flex justify-between items-center text-sm text-space-light/50">
+                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-space-light/70 text-sm flex items-center">
+                        <span className="flex items-center">
                           <span className="mr-1">❤️</span>
                           {post.likes || 0}
                         </span>
-                        <span className="text-space-light/70 text-sm flex items-center">
+                        <span className="flex items-center">
                           <span className="mr-1">👁️</span>
                           {post.views || 0}
                         </span>
                       </div>
-                      {post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {post.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-1 bg-space-navy/50 rounded-full text-xs text-space-light/70"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </Link>
-                ))}
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-8">
+                <p className="text-space-light/60">아직 등록된 블로그 글이 없습니다. 첫 번째 글을 작성해보세요!</p>
               </div>
             )}
-          </section>
+          </div>
+        </div>
+      </section>
 
-          {/* Latest AI Tools */}
-          <section>
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-2xl font-bold text-space-light">최신 AI 도구</h2>
-              <Link
-                to="/ai-tools"
-                className="text-space-glow hover:text-space-glow/70 transition-colors"
-              >
-                더 보기 →
-              </Link>
-            </div>
-            {latestTools.length === 0 ? (
-              <p className="text-space-light/70">아직 등록된 AI 도구가 없습니다.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {latestTools.map((tool) => (
-                  <Link
-                    key={tool.id}
-                    to={`/ai-tools/${tool.id}`}
-                    className="group bg-space-navy/30 border border-space-light/10 rounded-lg p-6 hover:border-space-glow/30 transition-colors block"
-                  >
-                    <h3 className="text-xl font-semibold text-space-light mb-2 group-hover:text-space-glow transition-colors">
-                      {tool.name}
-                    </h3>
-                    <p className="text-space-light/70 mb-4 line-clamp-3">
-                      {tool.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-space-light/70 text-sm flex items-center">
-                          <span className="mr-1">❤️</span>
-                          {tool.likes || 0}
-                        </span>
-                        <span className="text-space-light/70 text-sm flex items-center">
-                          <span className="mr-1">👁️</span>
-                          {tool.views || 0}
-                        </span>
-                      </div>
-                      <span className="text-sm text-space-light/50">
-                        {tool.category}
+      {/* AI 도구 섹션 */}
+      <section className="py-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl font-bold text-space-light">인기 AI 도구</h2>
+            <Link
+              to="/ai-tools"
+              className="text-space-accent hover:text-space-glow transition-colors flex items-center gap-1"
+            >
+              <span>더 보기</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featuredAITools.length > 0 ? (
+              featuredAITools.map((tool) => (
+                <Link
+                  key={tool.id}
+                  to={`/ai-tools/${tool.id}`}
+                  className="bg-space-navy/30 border border-space-light/10 rounded-lg p-6 hover:bg-space-navy/50 transition-colors"
+                >
+                  <h3 className="text-xl font-semibold mb-2 text-space-light">
+                    {tool.name}
+                  </h3>
+                  <p className="text-space-light/70 mb-4 line-clamp-3">
+                    {tool.description}
+                  </p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-space-accent text-sm">{tool.category}</span>
+                    <div className="flex items-center gap-2 text-sm text-space-light/50">
+                      <span className="flex items-center">
+                        <span className="mr-1">❤️</span>
+                        {tool.likes || 0}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="mr-1">👁️</span>
+                        {tool.views || 0}
                       </span>
                     </div>
-                  </Link>
-                ))}
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-8">
+                <p className="text-space-light/60">곧 다양한 AI 도구가 추가될 예정입니다!</p>
               </div>
             )}
-          </section>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* 푸터 */}
+      <footer className="bg-space-navy/50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-8 md:mb-0">
+              <h2 className="text-2xl font-bold text-space-light mb-2">MARVIS</h2>
+              <p className="text-space-light/60">AI 생성 아트와 컨텐츠의 세계로 오신 것을 환영합니다.</p>
+            </div>
+            <div className="flex flex-col md:flex-row gap-8">
+              <div>
+                <h3 className="text-lg font-medium text-space-light mb-3">바로가기</h3>
+                <ul className="space-y-2">
+                  <li>
+                    <Link to="/gallery" className="text-space-light/60 hover:text-space-light transition-colors">
+                      갤러리
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/blog" className="text-space-light/60 hover:text-space-light transition-colors">
+                      블로그
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/ai-tools" className="text-space-light/60 hover:text-space-light transition-colors">
+                      AI 도구
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-space-light mb-3">연락처</h3>
+                <ul className="space-y-2">
+                  <li className="text-space-light/60">
+                    이메일: kimpastor0191@gmail.com
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-space-light/10 text-center text-space-light/40 text-sm">
+            <p>© 2023 MARVIS. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

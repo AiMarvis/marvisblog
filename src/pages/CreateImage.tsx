@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { GalleryImage } from '../types';
+import { useContent } from '../hooks/useContent';
+import { v4 as uuidv4 } from 'uuid';
+import useAdmin from '../hooks/useAdmin';
 
 interface ImageFormData {
   title: string;
@@ -8,16 +12,6 @@ interface ImageFormData {
   tags: string[];
   image?: File;
   previewUrl?: string;
-}
-
-interface GalleryImage {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  url: string;
-  tags: string[];
-  createdAt: string;
 }
 
 const categories = [
@@ -34,7 +28,13 @@ const categories = [
 ];
 
 const CreateImage = () => {
+  const { id } = useParams<{ id?: string }>();
+  const isEditMode = !!id;
+  
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
+  const { items, addItem, updateItem } = useContent<GalleryImage>('gallery');
+
   const [formData, setFormData] = useState<ImageFormData>({
     title: '',
     description: '',
@@ -43,6 +43,34 @@ const CreateImage = () => {
   });
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 관리자 권한 확인
+  useEffect(() => {
+    if (!isAdmin) {
+      alert('관리자만 이미지를 추가하거나 수정할 수 있습니다.');
+      navigate('/gallery');
+    }
+  }, [isAdmin, navigate]);
+
+  // 편집 모드일 경우 기존 이미지 데이터 로드
+  useEffect(() => {
+    if (isEditMode) {
+      const existingImage = items.find(img => img.id === id);
+      if (existingImage) {
+        setFormData({
+          title: existingImage.title,
+          description: existingImage.description,
+          category: existingImage.category,
+          tags: existingImage.tags || [],
+          previewUrl: existingImage.imageUrl
+        });
+      } else {
+        setError('이미지를 찾을 수 없습니다.');
+        navigate('/gallery');
+      }
+    }
+  }, [isEditMode, id, items, navigate]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,58 +119,70 @@ const CreateImage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.image) {
-      alert('제목과 이미지는 필수 입력 항목입니다.');
+    
+    if (!formData.title.trim()) {
+      setError('제목을 입력해주세요.');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      setError('설명을 입력해주세요.');
+      return;
+    }
+
+    if (!formData.previewUrl) {
+      setError('이미지를 업로드해주세요.');
       return;
     }
 
     try {
-      // 이미지를 Base64로 변환
-      const base64Image = await convertImageToBase64(formData.image);
+      setIsSubmitting(true);
       
-      // 새 이미지 객체 생성
-      const newImage: GalleryImage = {
-        id: Date.now().toString(),
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        url: base64Image,
-        tags: formData.tags,
-        createdAt: new Date().toISOString(),
-      };
-
-      // 기존 이미지 목록 가져오기
-      const existingImages = localStorage.getItem('galleryImages');
-      const images = existingImages ? JSON.parse(existingImages) : [];
-      
-      // 새 이미지 추가
-      images.push(newImage);
-      
-      // 로컬 스토리지에 저장
-      localStorage.setItem('galleryImages', JSON.stringify(images));
-
-      // 갤러리 페이지로 이동
-      navigate('/gallery');
-    } catch (error) {
-      console.error('이미지 저장 중 오류 발생:', error);
-      alert('이미지 저장에 실패했습니다. 다시 시도해주세요.');
-    }
-  };
-
-  // 이미지를 Base64로 변환하는 함수
-  const convertImageToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result);
-        } else {
-          reject(new Error('이미지 변환 실패'));
+      if (isEditMode) {
+        // 기존 이미지 업데이트
+        const existingImage = items.find(img => img.id === id);
+        if (existingImage) {
+          const updatedImage: GalleryImage = {
+            ...existingImage,
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            imageUrl: formData.previewUrl,
+            tags: formData.tags,
+            updatedAt: new Date().toISOString(),
+            altText: formData.title
+          };
+          
+          await updateItem(id!, updatedImage);
+          navigate(`/gallery/${id}`);
         }
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
+      } else {
+        // 새 이미지 추가
+        const newImage: GalleryImage = {
+          id: uuidv4(),
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          imageUrl: formData.previewUrl,
+          tags: formData.tags,
+          likes: 0,
+          views: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: 'user1',
+          isFeatured: false,
+          altText: formData.title
+        };
+
+        await addItem(newImage);
+        navigate(`/gallery/${newImage.id}`);
+      }
+    } catch (error) {
+      console.error('이미지 저장 오류:', error);
+      setError('이미지 저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -158,7 +198,9 @@ const CreateImage = () => {
       <div className="relative">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="bg-space-navy/50 backdrop-blur-sm rounded-2xl p-6 border border-space-light/10">
-            <h1 className="text-3xl font-bold text-space-light mb-8">새 이미지 업로드</h1>
+            <h1 className="text-3xl font-bold text-space-light mb-8">
+              {isEditMode ? '이미지 수정' : '새 이미지 업로드'}
+            </h1>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* 이미지 업로드 영역 */}
@@ -291,9 +333,10 @@ const CreateImage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-space-accent hover:bg-space-glow transition-colors rounded-lg text-white"
+                  disabled={isSubmitting}
+                  className={`px-6 py-2 bg-space-accent hover:bg-space-glow transition-colors rounded-lg text-white ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  업로드
+                  {isSubmitting ? '처리 중...' : isEditMode ? '수정하기' : '업로드'}
                 </button>
               </div>
             </form>
