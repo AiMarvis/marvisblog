@@ -3,13 +3,14 @@ export interface GalleryImage {
   title: string;
   description: string;
   category: string;
-  url: string;
+  imageUrl: string;
   tags: string[];
   createdAt: string;
   likes: number;
   views: number;
   userId: string; // 작성자 식별을 위한 필드
   isFeatured: boolean; // 추천 작품 여부
+  altText?: string; // 이미지 대체 텍스트
 }
 
 export interface BlogPost {
