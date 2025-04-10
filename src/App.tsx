@@ -12,6 +12,7 @@ import ImageDetail from './pages/ImageDetail';
 import BlogDetail from './pages/BlogDetail';
 import ToolDetail from './pages/ToolDetail';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
+import { ContentProvider } from './contexts/ContentContext';
 
 // 라우터를 테마 제공자 내부에서 사용하기 위한 래퍼 컴포넌트
 const AppContent = () => {
@@ -49,7 +50,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <ThemeProvider>
-      <AppContent />
+      <ContentProvider>
+        <AppContent />
+      </ContentProvider>
     </ThemeProvider>
   );
 };

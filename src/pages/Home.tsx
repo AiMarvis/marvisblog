@@ -7,6 +7,7 @@ import { useContent } from '../hooks/useContent';
 import { GalleryImage, BlogPost, AITool } from '../types';
 import useAdmin from '../hooks/useAdmin';
 import { useTheme } from '../hooks/useTheme';
+import { useContentContext } from '../contexts/ContentContext';
 
 // 핵심 기능
 const features = [
@@ -43,21 +44,7 @@ const Home = () => {
   const navigate = useNavigate();
   const { verifyPassword, isAdmin, logout } = useAdmin();
   const { currentTheme } = useTheme();
-
-  const {
-    items: galleryImages,
-    getFeaturedItems: getFeaturedGalleryImages
-  } = useContent<GalleryImage>('gallery');
-  
-  const {
-    items: blogPosts,
-    getFeaturedItems: getFeaturedBlogPosts
-  } = useContent<BlogPost>('blog');
-  
-  const {
-    items: aiTools,
-    getFeaturedItems: getFeaturedAITools
-  } = useContent<AITool>('aiTools');
+  const { gallery, blog, aiTools } = useContentContext();
 
   const [featuredGalleryImages, setFeaturedGalleryImages] = useState<GalleryImage[]>([]);
   const [featuredBlogPosts, setFeaturedBlogPosts] = useState<BlogPost[]>([]);
@@ -65,10 +52,21 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    setFeaturedGalleryImages(getFeaturedGalleryImages(3));
-    setFeaturedBlogPosts(getFeaturedBlogPosts(3));
-    setFeaturedAITools(getFeaturedAITools(3));
-  }, [galleryImages, blogPosts, aiTools, getFeaturedGalleryImages, getFeaturedBlogPosts, getFeaturedAITools]);
+    setFeaturedGalleryImages(gallery.getFeaturedItems(3));
+    setFeaturedBlogPosts(blog.getFeaturedItems(3));
+    setFeaturedAITools(aiTools.getFeaturedItems(3));
+  }, [gallery.items, blog.items, aiTools.items]);
+
+  // 처음 로드 시 데이터 새로고침 (Supabase의 경우)
+  useEffect(() => {
+    const refreshData = async () => {
+      if (gallery.refresh) await gallery.refresh();
+      if (blog.refresh) await blog.refresh();
+      if (aiTools.refresh) await aiTools.refresh();
+    };
+    
+    refreshData();
+  }, []);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
