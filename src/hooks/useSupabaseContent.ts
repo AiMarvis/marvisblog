@@ -206,6 +206,50 @@ export function useSupabaseContent<T extends ContentType>(
         updatedAt: new Date().toISOString()
       };
       
+      // 갤러리 이미지의 경우 Storage 처리
+      if (contentType === 'gallery') {
+        const galleryImage = newItem as unknown as GalleryImage;
+        
+        // Base64 이미지인 경우 업로드 처리
+        if (galleryImage.imageUrl && galleryImage.imageUrl.startsWith('data:image')) {
+          try {
+            // Base64 데이터 추출
+            const base64Data = galleryImage.imageUrl.split(',')[1];
+            if (!base64Data) throw new Error('Invalid image data');
+            
+            // 이미지 데이터를 Blob으로 변환
+            const blob = await fetch(galleryImage.imageUrl).then(res => res.blob());
+            const fileExt = blob.type.split('/')[1] || 'png';
+            const fileName = `${newItem.id}.${fileExt}`;
+            
+            // Storage에 업로드 - 폴더 구조 단순화 (gallery/ 폴더 사용하지 않음)
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('images')
+              .upload(fileName, blob, {
+                contentType: blob.type,
+                upsert: true
+              });
+              
+            if (uploadError) throw uploadError;
+            
+            // 업로드된 이미지 URL 가져오기
+            const { data: urlData } = supabase.storage
+              .from('images')
+              .getPublicUrl(fileName);
+              
+            // 이미지 URL 업데이트
+            galleryImage.imageUrl = urlData.publicUrl;
+            
+            // 디버그 로그
+            console.log('이미지 업로드 성공:', fileName);
+            console.log('이미지 URL:', urlData.publicUrl);
+          } catch (storageError: any) {
+            console.error('Storage upload error:', storageError);
+            throw new Error(`Storage upload failed: ${storageError.message}`);
+          }
+        }
+      }
+      
       const supabaseItem = transformToSupabase(newItem, contentType);
       
       const { error } = await supabase
@@ -231,6 +275,46 @@ export function useSupabaseContent<T extends ContentType>(
         updatedAt: new Date().toISOString()
       };
       
+      // 갤러리 이미지의 경우 Storage 처리
+      if (contentType === 'gallery') {
+        const galleryImage = itemToUpdate as unknown as GalleryImage;
+        
+        // Base64 이미지인 경우 업로드 처리 (이미지가 변경된 경우)
+        if (galleryImage.imageUrl && galleryImage.imageUrl.startsWith('data:image')) {
+          try {
+            // 이미지 데이터를 Blob으로 변환
+            const blob = await fetch(galleryImage.imageUrl).then(res => res.blob());
+            const fileExt = blob.type.split('/')[1] || 'png';
+            const fileName = `${id}.${fileExt}`;
+            
+            // Storage에 업로드 - 폴더 구조 단순화
+            const { error: uploadError } = await supabase.storage
+              .from('images')
+              .upload(fileName, blob, {
+                contentType: blob.type,
+                upsert: true
+              });
+              
+            if (uploadError) throw uploadError;
+            
+            // 업로드된 이미지 URL 가져오기
+            const { data: urlData } = supabase.storage
+              .from('images')
+              .getPublicUrl(fileName);
+              
+            // 이미지 URL 업데이트
+            galleryImage.imageUrl = urlData.publicUrl;
+            
+            // 디버그 로그
+            console.log('이미지 업데이트 성공:', fileName);
+            console.log('이미지 URL:', urlData.publicUrl);
+          } catch (storageError: any) {
+            console.error('Storage upload error:', storageError);
+            throw new Error(`Storage upload failed: ${storageError.message}`);
+          }
+        }
+      }
+      
       const supabaseItem = transformToSupabase(itemToUpdate, contentType);
       
       const { error } = await supabase
@@ -252,6 +336,34 @@ export function useSupabaseContent<T extends ContentType>(
   // 아이템 삭제
   const deleteItem = async (id: string) => {
     try {
+      // 갤러리 이미지의 경우 Storage에서도 삭제
+      if (contentType === 'gallery') {
+        try {
+          const item = items.find(item => item.id === id) as unknown as GalleryImage;
+          if (item && item.imageUrl) {
+            // URL에서 파일 경로 추출
+            const fileUrl = item.imageUrl;
+            const fileName = fileUrl.split('/').pop();
+            
+            if (fileName) {
+              // 폴더 구조 단순화 - gallery/ 폴더 사용하지 않음
+              const { error: deleteError } = await supabase.storage
+                .from('images')
+                .remove([fileName]);
+                
+              if (deleteError) {
+                console.error('파일 삭제 오류:', deleteError);
+              } else {
+                console.log('파일 삭제 성공:', fileName);
+              }
+            }
+          }
+        } catch (storageError) {
+          console.error('Error deleting file from storage:', storageError);
+          // 파일 삭제 실패해도 계속 진행
+        }
+      }
+      
       const { error } = await supabase
         .from(tableName)
         .delete()
