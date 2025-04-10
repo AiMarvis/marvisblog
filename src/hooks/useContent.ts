@@ -185,4 +185,16 @@ export function useContent<T extends ContentType>(
     getFeaturedItems,
     getUserItems,
   };
-} 
+}
+
+export const addGalleryImage = (newImage: GalleryImage): GalleryImage => {
+  console.log('[Content Storage Debug] 이미지 추가:', newImage.id);
+  
+  const existingItems = getContentItems<GalleryImage>(galleryStorageKey);
+  
+  const updatedItems = [newImage, ...existingItems];
+  
+  saveContentItems(galleryStorageKey, updatedItems);
+  
+  return newImage;
+}
